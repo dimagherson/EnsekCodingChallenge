@@ -45,7 +45,7 @@ namespace EnsekCodingChallenge.Controllers
 
         private async Task<MeterReadingsResult> ProcessStream(Stream stream)
         {
-            var context = new List<MeterReadingEntryContext>();
+            var context = new MeterReadingContext();
             var streamReader = new StreamReader(stream);
 
             streamReader.ReadLine(); // skip headers
@@ -56,11 +56,11 @@ namespace EnsekCodingChallenge.Controllers
                 var line = streamReader.ReadLine();
                 lineNumber++;
                 var entryContext = GetEntryContext(line, lineNumber);
-                context.Add(entryContext);
+                context.AddEntryContext(entryContext);
             }
 
             // take only latest valid, make others invalid with appropriate error
-            var groups = context.Where(c => c.IsValid).GroupBy(c => c.Entry.AccountId);
+            var groups = context.ValidEntryContexts.GroupBy(c => c.Entry.AccountId);
 
             foreach (var group in groups)
             {
@@ -68,40 +68,38 @@ namespace EnsekCodingChallenge.Controllers
 
                 foreach (var olderEntry in older)
                 {
-                    olderEntry.IsValid = false;
-                    olderEntry.Error = "Newer read exists.";
+                    olderEntry.Invalidate("Newer read exists.");
                 }
             }
 
             var dataAccess = new DataAccess();
             var existingReads = await dataAccess.GetReads();
 
-            foreach (var entryContext in context.Where(i => i.IsValid))
+            foreach (var entryContext in context.ValidEntryContexts)
             {
                 var matchingAccountRead = existingReads.FirstOrDefault(r => r.AccountId == entryContext.Entry.AccountId);
 
                 if (matchingAccountRead == null)
                 {
-                    entryContext.IsValid = false;
-                    entryContext.Error = "Account does not exist.";
+                    entryContext.Invalidate("Account does not exist.");
                 }
                 else if (matchingAccountRead.DateTime.HasValue && matchingAccountRead.DateTime >= entryContext.Entry.DateTime)
                 {
-                    entryContext.IsValid = false;
-                    entryContext.Error = "Provided read must be newer than existing read.";
+                    entryContext.Invalidate("Provided read must be newer than existing read.");
                 }
             }
 
-            if (context.Any(c => c.IsValid))
+            if (context.ValidCount > 0)
             {
                 // save to db
-                await dataAccess.SaveReads(context.Where(c => c.IsValid).Select(c => c.Entry).ToList());
+                await dataAccess.SaveReads(context.ValidEntryContexts.Select(c => c.Entry).ToList());
             }
 
             var result = new MeterReadingsResult();
-            result.Successes = context.Count(c => c.IsValid);
-            result.Failures = context.Count(c => !c.IsValid);
-            foreach (var entry in context.Where(i => !i.IsValid))
+            result.Successes = context.ValidCount;
+            result.Failures = context.InvalidCount;
+
+            foreach (var entry in context.InvalidEntryContexts)
             {
                 result.Errors.Add(new MeterReadingEntryError
                 {
@@ -115,19 +113,11 @@ namespace EnsekCodingChallenge.Controllers
 
         private MeterReadingEntryContext GetEntryContext(string line, int lineNumber)
         {
-            var context = new MeterReadingEntryContext();
-            context.LineNumber = lineNumber;
-            context.Entry = Parse(line);
+            var entry = Parse(line);
 
-            if (context.Entry != null)
-            {
-                context.IsValid = true;
-            }
-            else
-            {
-                context.IsValid = false;
-                context.Error = "Parsing failed.";
-            }
+            var context = entry != null ?
+                MeterReadingEntryContext.CreateValid(lineNumber, entry) :
+                MeterReadingEntryContext.CreateInvalid(lineNumber, "Parsing failed.");
 
             return context;
         }
@@ -152,7 +142,7 @@ namespace EnsekCodingChallenge.Controllers
             }
 
 
-            if (!int.TryParse(split[2], out int value) || value < 0 || value > 99999)
+            if (!int.TryParse(split[2], out int value) || value < 0 || value > 99999) // todo: redo validation
             {
                 return null;
             }
@@ -166,12 +156,70 @@ namespace EnsekCodingChallenge.Controllers
         }
     }
 
+    public class MeterReadingContext
+    {
+        private IList<MeterReadingEntryContext> _entryContexts = new List<MeterReadingEntryContext>();
+
+        public IList<MeterReadingEntryContext> ValidEntryContexts => _entryContexts.Where(e => e.IsValid).ToList();
+        public IList<MeterReadingEntryContext> InvalidEntryContexts => _entryContexts.Where(e => !e.IsValid).ToList();
+        public int ValidCount => _entryContexts.Count(e => e.IsValid);
+        public int InvalidCount => _entryContexts.Count(e => !e.IsValid);
+
+        public void AddEntryContext(MeterReadingEntryContext entryContext)
+        {
+            if (entryContext == null)
+            {
+                throw new ArgumentNullException(nameof(entryContext));
+            }
+
+            _entryContexts.Add(entryContext);
+        }
+    }
+
     public class MeterReadingEntryContext
     {
-        public int LineNumber { get; set; }
-        public bool IsValid { get; set; }
-        public string Error { get; set; }
-        public MeterReadingEntry Entry { get; set; }
+        public int LineNumber { get; private set; }
+        public bool IsValid { get; private set; } = true;
+        public string Error { get; private set; }
+        public MeterReadingEntry Entry { get; private set; }
+
+        private MeterReadingEntryContext(int lineNumber)
+        {
+            if (lineNumber < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(lineNumber), "Cannot be less than 1.");
+            }
+
+            LineNumber = lineNumber;
+            
+        }
+
+        public static MeterReadingEntryContext CreateValid(int lineNumber, MeterReadingEntry entry)
+        {
+            if (entry == null)
+            {
+                throw new ArgumentNullException(nameof(entry));
+            }
+
+            var context = new MeterReadingEntryContext(lineNumber);
+            context.Entry = entry;
+
+            return context;
+        }
+
+        public static MeterReadingEntryContext CreateInvalid(int lineNumber, string error)
+        {
+            var context = new MeterReadingEntryContext(lineNumber);
+            context.Invalidate(error);
+
+            return context;
+        }
+
+        public void Invalidate(string error)
+        {
+            Error = error;
+            IsValid = false;
+        }
     }
 
     public class MeterReadingEntry
