@@ -7,18 +7,6 @@ using Microsoft.Extensions.Logging;
 
 namespace EnsekCodingChallenge.Controllers
 {
-    // upload file
-
-    // db connection
-    // db tables
-    // db seed data
-
-    // data validation - NNNNN
-    // data validation - account exists
-    // data - take valid latest
-
-    // response - number of successes / failures
-
     [ApiController]
     [Route("[controller]")]
     public class WeatherForecastController : ControllerBase
