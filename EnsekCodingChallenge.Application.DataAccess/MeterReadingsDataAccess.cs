@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
@@ -16,9 +17,16 @@ namespace EnsekCodingChallenge.Application.DataAccess
 
     public class MeterReadingsDataAccess : IMeterReadingsDataAccess
     {
+        private readonly ConnectionString _connectionString;
+
+        public MeterReadingsDataAccess(ConnectionString connectionString)
+        {
+            _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+        }
+
         private SqlConnection GetConnection()
         {
-            return new SqlConnection(@"Data Source=(localdb)\ProjectsV13;Initial Catalog=EnsekDB;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False");
+            return new SqlConnection(_connectionString);
         }
 
         public async Task<IList<ReadingDateTimeDto>> GetReads()

@@ -37,7 +37,6 @@ namespace EnsekCodingChallenge.Application.Services
                 return null;
             }
 
-
             if (!int.TryParse(split[2], out int value) || value < MinValue || value > MaxValue)
             {
                 return null;

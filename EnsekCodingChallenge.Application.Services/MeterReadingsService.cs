@@ -67,7 +67,7 @@ namespace EnsekCodingChallenge.Application.Services
 
         private void ValidateLatestIncomingReadsPerAccount(MeterReadingContext context)
         {
-            // take only latest valid read per accountId
+            // need only latest valid read per accountId
             var groups = context.ValidEntryContexts.GroupBy(c => c.Entry.AccountId);
 
             foreach (var group in groups)
