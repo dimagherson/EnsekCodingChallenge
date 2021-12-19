@@ -12,7 +12,9 @@ namespace EnsekCodingChallenge.Application.Services
                 throw new ArgumentNullException(nameof(services));
             }
 
-            return services.AddScoped<IMeterReadingsService, MeterReadingsService>();
+            return services
+                .AddScoped<IMeterReadingsService, MeterReadingsService>()
+                .AddScoped<IMeterReadingEntryParser, MeterReadingEntryParser>();
         }
     }
 }

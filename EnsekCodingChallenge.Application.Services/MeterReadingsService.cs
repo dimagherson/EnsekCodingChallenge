@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using EnsekCodingChallenge.Application.DataAccess;
-using EnsekCodingChallenge.Domain;
 
 namespace EnsekCodingChallenge.Application.Services
 {
@@ -14,18 +13,35 @@ namespace EnsekCodingChallenge.Application.Services
 
     public class MeterReadingsService : IMeterReadingsService
     {
+        private readonly IMeterReadingEntryParser _parser;
         private readonly IMeterReadingsDataAccess _dataAccess;
 
-        public MeterReadingsService(IMeterReadingsDataAccess dataAccess)
+        public MeterReadingsService(IMeterReadingEntryParser parser, IMeterReadingsDataAccess dataAccess)
         {
+            _parser = parser ?? throw new ArgumentNullException(nameof(parser));
             _dataAccess = dataAccess ?? throw new ArgumentNullException(nameof(dataAccess));
         }
 
         public async Task<MeterReadingContext> ProcessStream(Stream stream)
         {
             var context = new MeterReadingContext();
-            var streamReader = new StreamReader(stream);
+            
+            InitiateContext(context, stream);
+            ValidateLatestIncomingReadsPerAccount(context);
+            await ValidateLatestReadDateTime(context);
+            await SaveValidReads(context);
 
+            return context;
+        }
+
+        private void InitiateContext(MeterReadingContext context, Stream stream)
+        {
+            if (stream == null || !stream.CanRead)
+            {
+                throw new ArgumentException(nameof(stream), "Cannot process stream");
+            }
+
+            var streamReader = new StreamReader(stream);
             streamReader.ReadLine(); // skip headers
 
             var lineNumber = 0;
@@ -36,8 +52,22 @@ namespace EnsekCodingChallenge.Application.Services
                 var entryContext = GetEntryContext(line, lineNumber);
                 context.AddEntryContext(entryContext);
             }
+        }
 
-            // take only latest valid, make others invalid with appropriate error
+        private MeterReadingEntryContext GetEntryContext(string line, int lineNumber)
+        {
+            var entry = _parser.Parse(line);
+
+            var context = entry != null ?
+                MeterReadingEntryContext.CreateValid(lineNumber, entry) :
+                MeterReadingEntryContext.CreateInvalid(lineNumber, "Parsing failed.");
+
+            return context;
+        }
+
+        private void ValidateLatestIncomingReadsPerAccount(MeterReadingContext context)
+        {
+            // take only latest valid read per accountId
             var groups = context.ValidEntryContexts.GroupBy(c => c.Entry.AccountId);
 
             foreach (var group in groups)
@@ -49,7 +79,10 @@ namespace EnsekCodingChallenge.Application.Services
                     olderEntry.Invalidate("Newer read exists.");
                 }
             }
+        }
 
+        private async Task ValidateLatestReadDateTime(MeterReadingContext context)
+        {
             var existingReads = await _dataAccess.GetReads();
 
             foreach (var entryContext in context.ValidEntryContexts)
@@ -65,53 +98,14 @@ namespace EnsekCodingChallenge.Application.Services
                     entryContext.Invalidate("Provided read must be newer than existing read.");
                 }
             }
+        }
 
+        private async Task SaveValidReads(MeterReadingContext context)
+        {
             if (context.ValidCount > 0)
             {
-                // save to db
                 await _dataAccess.SaveReads(context.ValidEntryContexts.Select(c => c.Entry).ToList());
             }
-
-            return context;
-        }
-
-        private MeterReadingEntryContext GetEntryContext(string line, int lineNumber)
-        {
-            var entry = Parse(line);
-
-            var context = entry != null ?
-                MeterReadingEntryContext.CreateValid(lineNumber, entry) :
-                MeterReadingEntryContext.CreateInvalid(lineNumber, "Parsing failed.");
-
-            return context;
-        }
-
-        private MeterReadingEntry Parse(string line)
-        {
-            var split = line.Split(',');
-
-            if (split.Length < 3)
-            {
-                return null;
-            }
-
-            if (!int.TryParse(split[0], out int accountId))
-            {
-                return null;
-            }
-
-            if (!DateTime.TryParse(split[1], out DateTime dateTime))
-            {
-                return null;
-            }
-
-
-            if (!int.TryParse(split[2], out int value) || value < 0 || value > 99999) // todo: redo validation
-            {
-                return null;
-            }
-
-            return new MeterReadingEntry(accountId, dateTime, value);
         }
     }
 }

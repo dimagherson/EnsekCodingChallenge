@@ -6,7 +6,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EnsekCodingChallenge.Api.Contracts\EnsekCodingChallenge.Api.Contracts.csproj" />
-    <ProjectReference Include="..\EnsekCodingChallenge.Application.DataAccess\EnsekCodingChallenge.Application.DataAccess.csproj" />
     <ProjectReference Include="..\EnsekCodingChallenge.Application.Services\EnsekCodingChallenge.Application.Services.csproj" />
   </ItemGroup>
 
