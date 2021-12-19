@@ -8,21 +8,10 @@ using Dapper;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
 using System.Text;
+using EnsekCodingChallenge.Api.Contracts.Output;
 
 namespace EnsekCodingChallenge.Controllers
 {
-    // upload file
-
-    // db connection
-    // db tables
-    // db seed data
-
-    // data validation - NNNNN
-    // data validation - account exists
-    // data - take valid latest
-
-    // response - number of successes / failures
-
     [ApiController]
     [Route("/")]
     public class MeterReadingsController : ControllerBase
@@ -33,9 +22,10 @@ namespace EnsekCodingChallenge.Controllers
             if (file?.Length > 0)
             {
                 var stream = file.OpenReadStream();
-                var result = await ProcessStream(stream);
+                var context = await ProcessStream(stream);
+                var model = CreateResponseModel(context);
 
-                return Ok(result);
+                return Ok(model);
             }
 
             ModelState.AddModelError(nameof(file), "Cannot be empty.");
@@ -43,7 +33,27 @@ namespace EnsekCodingChallenge.Controllers
             return ValidationProblem();
         }
 
-        private async Task<MeterReadingsResult> ProcessStream(Stream stream)
+        private MeterReadingsModel CreateResponseModel(MeterReadingContext context)
+        {
+            var model = new MeterReadingsModel
+            {
+                Successes = context.ValidCount,
+                Failures = context.InvalidCount
+            };
+
+            foreach (var entry in context.InvalidEntryContexts)
+            {
+                model.Errors.Add(new MeterReadingEntryErrorModel
+                {
+                    LineNumber = entry.LineNumber,
+                    Error = entry.Error
+                });
+            }
+
+            return model;
+        }
+
+        private async Task<MeterReadingContext> ProcessStream(Stream stream)
         {
             var context = new MeterReadingContext();
             var streamReader = new StreamReader(stream);
@@ -95,20 +105,7 @@ namespace EnsekCodingChallenge.Controllers
                 await dataAccess.SaveReads(context.ValidEntryContexts.Select(c => c.Entry).ToList());
             }
 
-            var result = new MeterReadingsResult();
-            result.Successes = context.ValidCount;
-            result.Failures = context.InvalidCount;
-
-            foreach (var entry in context.InvalidEntryContexts)
-            {
-                result.Errors.Add(new MeterReadingEntryError
-                {
-                    LineNumber = entry.LineNumber,
-                    Error = entry.Error
-                });
-            }
-
-            return result;
+            return context;
         }
 
         private MeterReadingEntryContext GetEntryContext(string line, int lineNumber)
@@ -284,18 +281,5 @@ namespace EnsekCodingChallenge.Controllers
     {
         public int AccountId { get; set; }
         public DateTime? DateTime { get; set; }
-    }
-
-    public class MeterReadingsResult
-    {
-        public int Successes { get; set; }
-        public int Failures { get; set; }
-        public IList<MeterReadingEntryError> Errors { get; set; } = new List<MeterReadingEntryError>();
-    }
-
-    public class MeterReadingEntryError
-    {
-        public int LineNumber { get; set; }
-        public string Error { get; set; }
     }
 }
