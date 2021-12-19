@@ -9,6 +9,12 @@ Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "EnsekDB", "EnsekDB\EnsekDB.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnsekCodingChallenge.Api.Contracts", "EnsekCodingChallenge.Api.Contracts\EnsekCodingChallenge.Api.Contracts.csproj", "{109F173A-6C9B-4EF6-9266-B68EFC4C9C81}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnsekCodingChallenge.Domain", "EnsekCodingChallenge.Domain\EnsekCodingChallenge.Domain.csproj", "{51EE3F93-3C28-4F3B-9591-219949F6563D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnsekCodingChallenge.Application.Services", "EnsekCodingChallenge.Application.Services\EnsekCodingChallenge.Application.Services.csproj", "{76CF780A-7B7B-468A-876E-42E3F44382EB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnsekCodingChallenge.Application.DataAccess", "EnsekCodingChallenge.Application.DataAccess\EnsekCodingChallenge.Application.DataAccess.csproj", "{066B6581-B115-442D-B9F9-BEFFE3711357}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,6 +35,18 @@ Global
 		{109F173A-6C9B-4EF6-9266-B68EFC4C9C81}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{109F173A-6C9B-4EF6-9266-B68EFC4C9C81}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{109F173A-6C9B-4EF6-9266-B68EFC4C9C81}.Release|Any CPU.Build.0 = Release|Any CPU
+		{51EE3F93-3C28-4F3B-9591-219949F6563D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51EE3F93-3C28-4F3B-9591-219949F6563D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51EE3F93-3C28-4F3B-9591-219949F6563D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51EE3F93-3C28-4F3B-9591-219949F6563D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{76CF780A-7B7B-468A-876E-42E3F44382EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{76CF780A-7B7B-468A-876E-42E3F44382EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{76CF780A-7B7B-468A-876E-42E3F44382EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{76CF780A-7B7B-468A-876E-42E3F44382EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{066B6581-B115-442D-B9F9-BEFFE3711357}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{066B6581-B115-442D-B9F9-BEFFE3711357}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{066B6581-B115-442D-B9F9-BEFFE3711357}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{066B6581-B115-442D-B9F9-BEFFE3711357}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
